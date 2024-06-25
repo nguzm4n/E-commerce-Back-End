@@ -44,12 +44,12 @@ class Product(db.Model):
     price = db.Column(db.Float, nullable=False)
     avatar = db.Column(db.String(255))
     stock_quantity = db.Column(db.Integer, nullable=False)
-    category_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=False)
+    category_id = db.Column(db.Integer, db.ForeignKey('categories.id'))
     created_at = db.Column(db.DateTime(), default=db.func.current_timestamp())
     updated_at = db.Column(db.DateTime(), default=db.func.current_timestamp())
     order_details = db.relationship('OrderDetail', backref='product', lazy=True)
     cart_items = db.relationship('CartItem', backref='product', lazy=True)
-            
+
     def serialize(self):
         return {
             "id": self.id,
@@ -58,9 +58,13 @@ class Product(db.Model):
             "price": self.price,
             "avatar": self.avatar,
             "stock_quantity": self.stock_quantity,
-             "category_id": self.category_id
-            
+            "category_id": self.category_id
+
         }
+
+    def save(self):
+        db.session.add(self)
+        db.session.commit()
 
 class Category(db.Model):
     __tablename__ = 'categories'
@@ -146,3 +150,12 @@ class Review(db.Model):
     updated_at = db.Column(db.DateTime(), default=db.func.current_timestamp())
     user = db.relationship('User', backref='reviews')
     product = db.relationship('Product', backref='reviews')
+
+class CartItem(db.Model):
+    __tablename__ = 'cart_items'
+    id = db.Column(db.Integer, primary_key=True)
+    cart_id = db.Column(db.Integer, db.ForeignKey('carts.id'), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
+    quantity = db.Column(db.Integer, nullable=False)
+    created_at = db.Column(db.DateTime(), default=db.func.current_timestamp())
+    updated_at = db.Column(db.DateTime(), default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())

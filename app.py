@@ -7,7 +7,7 @@ from flask_cors import CORS
 from dotenv import load_dotenv  # Para leer el archivo .env
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
 from werkzeug.security import generate_password_hash, check_password_hash
-from models import db, User
+from models import db, User, Product
 
 load_dotenv()
 
@@ -122,6 +122,59 @@ def sign_up():
         }
         return jsonify({"success": " Registration was Successful", "datos": datos}), 201
 
+
+@app.route('/additem', methods=['POST'])
+def add_item():
+    item_data = request.json
+    if not item_data:
+        return jsonify({"msg": "No JSON data received"}), 400
+
+    item_name = item_data.get('name')
+    item_description = item_data.get('description')
+    item_price = item_data.get('price')
+    item_avatar = item_data.get('avatar')
+    item_stock = item_data.get('stock_quantity')  
+    item_category = item_data.get('category_id')  
+
+    if not item_name:
+        return jsonify({"msg": "item_name is required"}), 400
+    elif item_name == "":
+        return jsonify({"msg": "item_name is required"}), 400
+    if not item_description:
+        return jsonify({"msg": "item_description is required"}), 400
+    elif item_description == "":
+        return jsonify({"msg": "item_description is required"}), 400
+    if not item_price:
+        return jsonify({"msg": "item_price is required"}), 400
+    elif item_price == "":
+        return jsonify({"msg": "item_price is required"}), 400
+    if not item_avatar:
+        return jsonify({"msg": "item_avatar is required"}), 400
+    elif item_avatar == "":
+        return jsonify({"msg": "item_avatar is required"}), 400
+    if not item_stock:
+        return jsonify({"msg": "item_stock is required"}), 400
+    elif item_stock == "":
+        return jsonify({"msg": "item_stock is required"}), 400
+  
+
+    product = Product(
+        name=item_name,
+        description=item_description,
+        price=item_price,
+        avatar=item_avatar,
+        stock_quantity=item_stock
+    
+    )
+
+    product.save()
+
+    if product:
+        datos = {
+            "product": product.serialize()
+        }
+
+    return jsonify({"success": "Item added successfully", "datos": datos}), 201
 
 with app.app_context():
     db.create_all()
