@@ -133,8 +133,8 @@ def add_item():
     item_description = item_data.get('description')
     item_price = item_data.get('price')
     item_avatar = item_data.get('avatar')
-    item_stock = item_data.get('stock_quantity')  
-    item_category = item_data.get('category_id')  
+    item_stock = item_data.get('stock_quantity')
+    item_brand = item_data.get('brand')
 
     if not item_name:
         return jsonify({"msg": "item_name is required"}), 400
@@ -156,15 +156,19 @@ def add_item():
         return jsonify({"msg": "item_stock is required"}), 400
     elif item_stock == "":
         return jsonify({"msg": "item_stock is required"}), 400
-  
+    if not item_brand:
+        return jsonify({"msg": "item_brand is required"}), 400
+    elif item_brand == "":
+        return jsonify({"msg": "item_brand is required"}), 400
 
     product = Product(
         name=item_name,
         description=item_description,
         price=item_price,
         avatar=item_avatar,
-        stock_quantity=item_stock
-    
+        stock_quantity=item_stock,
+        brand=item_brand
+
     )
 
     product.save()
@@ -175,6 +179,31 @@ def add_item():
         }
 
     return jsonify({"success": "Item added successfully", "datos": datos}), 201
+
+
+@app.route('/getprs', methods=['GET'])
+def get_prs():
+    prs_guitars = Product.query.filter_by(brand='prs').all()
+    serialized_guitars = [guitar.serialize() for guitar in prs_guitars]
+
+    return jsonify({"success": "PRS guitars gathered successfully", "guitars": serialized_guitars}), 200
+
+
+@app.route('/getchapman', methods=['GET'])
+def get_chapman():
+    chapman_guitars = Product.query.filter_by(brand='chapman').all()
+    serialized_guitars = [guitar.serialize() for guitar in chapman_guitars]
+
+    return jsonify({"success": "Chapman guitars gathered successfully", "guitars": serialized_guitars}), 200
+
+
+@app.route('/getsolar', methods=['GET'])
+def get_solar():
+    solar_guitars = Product.query.filter_by(brand='solar').all()
+    serialized_guitars = [guitar.serialize() for guitar in solar_guitars]
+
+    return jsonify({"success": "Solar guitars gathered successfully", "guitars": serialized_guitars}), 200
+
 
 with app.app_context():
     db.create_all()
