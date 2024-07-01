@@ -205,6 +205,22 @@ def get_solar():
     return jsonify({"success": "Solar guitars gathered successfully", "guitars": serialized_guitars}), 200
 
 
+@app.route('/getguitarid/<int:id>', methods=['GET'])
+def get_guitar_id(id):
+    guitar_id = Product.query.get(id)
+    if not guitar_id:
+        return jsonify({"msg": "Guitar Not Found"}), 404
+    return jsonify(guitar_id.serialize()), 200
+
+@app.route('/getallguitars', methods=['GET'])
+def get_all_guitars():
+    all_guitars = Product.query.all()
+    all_guitars = list(map(lambda guitar: guitar.serialize(), all_guitars))
+    return jsonify(all_guitars), 200
+
+
+
+
 with app.app_context():
     db.create_all()
 
