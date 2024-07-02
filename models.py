@@ -127,6 +127,14 @@ class Cart(db.Model):
     updated_at = db.Column(db.DateTime(), default=db.func.current_timestamp())
     cart_items = db.relationship('CartItem', backref='cart', lazy=True)
 
+    def serialize(self):
+        return {
+            "id": self.id,
+            "cart_id": self.cart_id,
+            "product_id": self.product_id,
+            "quantity": self.quantity,
+            "product": self.product.serialize()
+        }
 class ShippingAddress(db.Model):
     __tablename__ = 'shipping_addresses'
     id = db.Column(db.Integer, primary_key=True)

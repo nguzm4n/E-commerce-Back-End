@@ -219,6 +219,33 @@ def get_all_guitars():
     return jsonify(all_guitars), 200
 
 
+@app.route('/cart/add', methods=['POST'])
+def add_to_cart():
+    data = request.json
+    product_id = data.get('product_id')
+    quantity = data.get('quantity', 1)
+
+    # Obtén el carrito del usuario (suponiendo que el usuario esté autenticado)
+    user_id = get_current_user_id()  # Implementa esta función según tu lógica de autenticación
+    cart = Cart.query.filter_by(user_id=user_id).first()
+
+    if not cart:
+        cart = Cart(user_id=user_id)
+        db.session.add(cart)
+        db.session.commit()
+
+    # Verifica si el producto ya está en el carrito
+    cart_item = CartItem.query.filter_by(cart_id=cart.id, product_id=product_id).first()
+
+    if cart_item:
+        cart_item.quantity += quantity
+    else:
+        cart_item = CartItem(cart_id=cart.id, product_id=product_id, quantity=quantity)
+        db.session.add(cart_item)
+
+    db.session.commit()
+
+    return jsonify({"msg": "Product added to cart", "cart_item": cart_item.serialize()}), 200
 
 
 with app.app_context():
