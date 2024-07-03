@@ -7,8 +7,7 @@ from flask_cors import CORS
 from dotenv import load_dotenv  # Para leer el archivo .env
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
 from werkzeug.security import generate_password_hash, check_password_hash
-from models import db, User, Product
-
+from models import db, User, Product, Cart, CartItem
 load_dotenv()
 
 app = Flask(__name__)
@@ -16,11 +15,15 @@ app.config['DEBUG'] = True
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URI')
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
+app.config['SESSION_TYPE'] = 'filesystem' 
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
+
 
 db.init_app(app)
 jwt = JWTManager(app)
 Migrate(app, db)
 CORS(app)  # Se evita que se bloqueen las peticiones
+
 
 
 @app.route('/token', methods=['GET'])
@@ -77,6 +80,7 @@ def sign_up():
     password = user_data.get('password')
     email = user_data.get('email')
     name = user_data.get('name')
+    address = user_data.get('address')
 
     if not username:
         return jsonify({"msg": "username is required"}), 400
@@ -107,7 +111,8 @@ def sign_up():
         username=username,
         password=generate_password_hash(password),
         email=email,
-        name=name
+        name=name,
+        address=address
     )
 
     user.save()
@@ -219,33 +224,6 @@ def get_all_guitars():
     return jsonify(all_guitars), 200
 
 
-@app.route('/cart/add', methods=['POST'])
-def add_to_cart():
-    data = request.json
-    product_id = data.get('product_id')
-    quantity = data.get('quantity', 1)
-
-    # Obtén el carrito del usuario (suponiendo que el usuario esté autenticado)
-    user_id = get_current_user_id()  # Implementa esta función según tu lógica de autenticación
-    cart = Cart.query.filter_by(user_id=user_id).first()
-
-    if not cart:
-        cart = Cart(user_id=user_id)
-        db.session.add(cart)
-        db.session.commit()
-
-    # Verifica si el producto ya está en el carrito
-    cart_item = CartItem.query.filter_by(cart_id=cart.id, product_id=product_id).first()
-
-    if cart_item:
-        cart_item.quantity += quantity
-    else:
-        cart_item = CartItem(cart_id=cart.id, product_id=product_id, quantity=quantity)
-        db.session.add(cart_item)
-
-    db.session.commit()
-
-    return jsonify({"msg": "Product added to cart", "cart_item": cart_item.serialize()}), 200
 
 
 with app.app_context():
