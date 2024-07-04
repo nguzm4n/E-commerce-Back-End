@@ -117,7 +117,7 @@ def sign_up():
 
     user.save()
     if user:
-        expires = datetime.timedelta(hours=10)
+        expires = datetime.timedelta(hours=72)
         access_token = create_access_token(
             identity=user.id, expires_delta=expires)
         datos = {
@@ -223,8 +223,139 @@ def get_all_guitars():
     all_guitars = list(map(lambda guitar: guitar.serialize(), all_guitars))
     return jsonify(all_guitars), 200
 
+@app.route('/cart/add/<int:id>', methods=['POST'])
+@jwt_required()
+def add_to_cart(id):
+    current_user_id = get_jwt_identity()
+    product = Product.query.get(id)
+
+    if not product:
+        return jsonify({"msg": "Product not found"}), 404
+
+    # Verificar si hay suficiente stock
+    if product.stock_quantity < 1:
+        return jsonify({"msg": "Not enough stock available"}), 400
+
+    cart = Cart.query.filter_by(user_id=current_user_id).first()
+    if not cart:
+        cart = Cart(user_id=current_user_id)
+        db.session.add(cart)
+        db.session.commit()
+
+    cart_item = CartItem.query.filter_by(cart_id=cart.id, product_id=product.id).first()
+    if cart_item:
+        cart_item.quantity += 1
+    else:
+        cart_item = CartItem(cart_id=cart.id, product_id=product.id, quantity=1)
+        db.session.add(cart_item)
+
+    db.session.commit()
+
+    return jsonify({"msg": "Product added to cart successfully"}), 201
+
+@app.route('/cart', methods=['GET'])
+@jwt_required()
+def view_cart():
+    current_user_id = get_jwt_identity()
+    cart = Cart.query.filter_by(user_id=current_user_id).first()
+
+    if not cart:
+        return jsonify({"msg": "Cart is empty"}), 200
+
+    cart_items = CartItem.query.filter_by(cart_id=cart.id).all()
+    serialized_items = [item.serialize() for item in cart_items]
+
+    return jsonify({"cart": serialized_items}), 200
+
+@app.route('/cart/update', methods=['PUT'])
+@jwt_required()
+def update_cart_item():
+    current_user_id = get_jwt_identity()
+    product_id = request.json.get('product_id')
+    quantity = request.json.get('quantity')
+
+    if not product_id or quantity is None:
+        return jsonify({"msg": "Product ID and quantity are required"}), 400
+
+    cart = Cart.query.filter_by(user_id=current_user_id).first()
+    if not cart:
+        return jsonify({"msg": "Cart not found"}), 404
+
+    cart_item = CartItem.query.filter_by(cart_id=cart.id, product_id=product_id).first()
+    if not cart_item:
+        return jsonify({"msg": "Product not found in cart"}), 404
+
+    cart_item.quantity = quantity
+    db.session.commit()
+
+    return jsonify({"msg": "Cart updated successfully"}), 200
 
 
+
+@app.route('/cart/remove/<int:id>', methods=['DELETE'])
+@jwt_required()
+def remove_cart_item(id):
+    current_user_id = get_jwt_identity()
+    product = Product.query.get(id)
+
+    if not product:
+        return jsonify({"msg": "Product not found"}), 404
+
+    cart = Cart.query.filter_by(user_id=current_user_id).first()
+    if not cart:
+        return jsonify({"msg": "Cart not found"}), 404
+
+    cart_item = CartItem.query.filter_by(cart_id=cart.id, product_id=product.id).first()
+    if not cart_item:
+        return jsonify({"msg": "Product not found in cart"}), 404
+
+    db.session.delete(cart_item)
+    db.session.commit()
+
+    return jsonify({"msg": "Product removed from cart successfully"}), 200
+
+
+
+@app.route('/cart/clear', methods=['DELETE'])
+@jwt_required()
+def clear_cart():
+    current_user_id = get_jwt_identity()
+    cart = Cart.query.filter_by(user_id=current_user_id).first()
+
+    if not cart:
+        return jsonify({"msg": "Cart not found"}), 404
+
+    CartItem.query.filter_by(cart_id=cart.id).delete()
+    db.session.commit()
+
+    return jsonify({"msg": "Cart cleared successfully"}), 200
+
+@app.route('/cart/item/<int:id>/decrement', methods=['POST'])
+@jwt_required()
+def decrement_item_quantity(id):
+    current_user_id = get_jwt_identity()
+
+    # Obtener el carrito del usuario autenticado
+    cart = Cart.query.filter_by(user_id=current_user_id).first()
+
+    if not cart:
+        return jsonify({"msg": "Cart not found"}), 404
+
+    # Obtener el ítem del carrito por su id
+    cart_item = CartItem.query.filter_by(cart_id=cart.id, product_id=id).first()
+
+    if not cart_item:
+        return jsonify({"msg": "CartItem not found"}), 404
+
+    # Verificar que la cantidad actual sea mayor que 1
+    if cart_item.quantity <= 1:
+        return jsonify({"msg": "Item quantity cannot be less than 1"}), 400
+
+    # Decrementar la cantidad del ítem
+    cart_item.quantity -= 1
+    db.session.commit()
+
+    return jsonify(cart_item.serialize()), 200
 
 with app.app_context():
     db.create_all()

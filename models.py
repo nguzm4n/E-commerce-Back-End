@@ -89,10 +89,13 @@ class CartItem(db.Model):
     product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
     quantity = db.Column(db.Integer, nullable=False, default=1)
 
-
+    product = db.relationship('Product', backref='cart_items')
+       
     def serialize(self):
         return {
             'id': self.id,
             'product_id': self.product_id,
             'quantity': self.quantity,
+            'product_name': self.product.name,
+            'product_avatar': self.product.avatar
         }
