@@ -97,5 +97,8 @@ class CartItem(db.Model):
             'product_id': self.product_id,
             'quantity': self.quantity,
             'product_name': self.product.name,
-            'product_avatar': self.product.avatar
+            'product_avatar': self.product.avatar,
+            'price': self.product.price
+            
+            
         }

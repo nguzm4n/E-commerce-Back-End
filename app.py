@@ -26,15 +26,6 @@ CORS(app)  # Se evita que se bloqueen las peticiones
 
 
 
-@app.route('/token', methods=['GET'])
-def token():
-    data = {
-        "access token": create_access_token(identity="test@email.com")
-    }
-
-    return jsonify(data), 200
-
-
 @app.route('/login', methods=['POST'])
 def login():
 
@@ -59,7 +50,7 @@ def login():
     if not check_password_hash(user_found.password, password):
         return jsonify({"msg": "Email or password is not correct."}), 401
 
-    expires = datetime.timedelta(hours=10)
+    expires = datetime.timedelta(hours=72)
     access_token = create_access_token(
         identity=user_found.id, expires_delta=expires)
     datos = {
@@ -243,15 +234,21 @@ def add_to_cart(id):
         db.session.commit()
 
     cart_item = CartItem.query.filter_by(cart_id=cart.id, product_id=product.id).first()
+
     if cart_item:
+        if cart_item.quantity >= product.stock_quantity:
+            return jsonify({"msg": "Not enough stock available"}), 400
         cart_item.quantity += 1
     else:
+        if 1 > product.stock_quantity:
+            return jsonify({"msg": "Not enough stock available"}), 400
         cart_item = CartItem(cart_id=cart.id, product_id=product.id, quantity=1)
         db.session.add(cart_item)
 
     db.session.commit()
 
     return jsonify({"msg": "Product added to cart successfully"}), 201
+
 
 @app.route('/cart', methods=['GET'])
 @jwt_required()
