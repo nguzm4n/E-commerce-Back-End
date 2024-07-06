@@ -250,7 +250,7 @@ def add_to_cart(id):
     serialized_items = [item.serialize() for item in cart_items]
     db.session.commit()
 
-    return jsonify({"msg": "Product added to cart successfully", "cart": serialized_items }), 201
+    return jsonify({"success": "Product added to cart successfully", "cart": serialized_items }), 201
 
 
 @app.route('/cart', methods=['GET'])
@@ -265,7 +265,7 @@ def view_cart():
     cart_items = CartItem.query.filter_by(cart_id=cart.id).all()
     serialized_items = [item.serialize() for item in cart_items]
 
-    return jsonify({"cart": serialized_items}), 200
+    return jsonify({"success": "Cart Obtained", "cart": serialized_items}), 200
 
 @app.route('/cart/update', methods=['PUT'])
 @jwt_required()
@@ -310,13 +310,14 @@ def remove_cart_item(id):
     if not cart_item:
         return jsonify({"msg": "Product not found in cart"}), 404
 
-    cart_items = CartItem.query.filter_by(cart_id=cart.id).all()
-    serialized_items = [item.serialize() for item in cart_items]
+    
 
     db.session.delete(cart_item)
     db.session.commit()
-
-    return jsonify({"msg": "Product removed from cart successfully", "cart": serialized_items}), 200
+    
+    cart_items = CartItem.query.filter_by(cart_id=cart.id).all()
+    serialized_items = [item.serialize() for item in cart_items]
+    return jsonify({"success": "Product removed from cart successfully", "cart": serialized_items}), 200
 
 
 
@@ -332,20 +333,20 @@ def clear_cart():
     CartItem.query.filter_by(cart_id=cart.id).delete()
     db.session.commit()
 
-    return jsonify({"msg": "Cart cleared successfully"}), 200
+    return jsonify({"success": "Cart cleared successfully"}), 200
 
 @app.route('/cart/item/<int:id>/decrement', methods=['POST'])
 @jwt_required()
 def decrement_item_quantity(id):
     current_user_id = get_jwt_identity()
     
-    # Obtener el carrito del usuario autenticado
+    
     cart = Cart.query.filter_by(user_id=current_user_id).first()
 
     if not cart:
         return jsonify({"msg": "Cart not found"}), 404
 
-    # Obtener el ítem del carrito por su id
+    
     cart_item = CartItem.query.filter_by(cart_id=cart.id, product_id=id).first()
 
     if not cart_item:
@@ -353,7 +354,7 @@ def decrement_item_quantity(id):
 
     # Verificar que la cantidad actual sea mayor que 1
     if cart_item.quantity <= 1:
-        return jsonify({"msg": "Item quantity cannot be less than 1"}), 400
+        return jsonify({"msg": "Item quantity cannot be less than 1", "cart": serialized_items }), 400
 
     # Decrementar la cantidad del ítem
     cart_item.quantity -= 1
@@ -364,7 +365,7 @@ def decrement_item_quantity(id):
     
     
 
-    return jsonify({"msg": "Item decremented", "cart": serialized_items}), 200
+    return jsonify({"success": "Item decremented", "cart": serialized_items}), 200
 
 with app.app_context():
     db.create_all()
