@@ -219,7 +219,8 @@ def get_all_guitars():
 def add_to_cart(id):
     current_user_id = get_jwt_identity()
     product = Product.query.get(id)
-
+    cart = Cart.query.filter_by(user_id=current_user_id).first()
+    
     if not product:
         return jsonify({"msg": "Product not found"}), 404
 
@@ -244,10 +245,12 @@ def add_to_cart(id):
             return jsonify({"msg": "Not enough stock available"}), 400
         cart_item = CartItem(cart_id=cart.id, product_id=product.id, quantity=1)
         db.session.add(cart_item)
-
+        
+    cart_items = CartItem.query.filter_by(cart_id=cart.id).all()
+    serialized_items = [item.serialize() for item in cart_items]
     db.session.commit()
 
-    return jsonify({"msg": "Product added to cart successfully"}), 201
+    return jsonify({"msg": "Product added to cart successfully", "cart": serialized_items }), 201
 
 
 @app.route('/cart', methods=['GET'])
@@ -294,7 +297,8 @@ def update_cart_item():
 def remove_cart_item(id):
     current_user_id = get_jwt_identity()
     product = Product.query.get(id)
-
+    cart = Cart.query.filter_by(user_id=current_user_id).first()
+    
     if not product:
         return jsonify({"msg": "Product not found"}), 404
 
@@ -306,10 +310,13 @@ def remove_cart_item(id):
     if not cart_item:
         return jsonify({"msg": "Product not found in cart"}), 404
 
+    cart_items = CartItem.query.filter_by(cart_id=cart.id).all()
+    serialized_items = [item.serialize() for item in cart_items]
+
     db.session.delete(cart_item)
     db.session.commit()
 
-    return jsonify({"msg": "Product removed from cart successfully"}), 200
+    return jsonify({"msg": "Product removed from cart successfully", "cart": serialized_items}), 200
 
 
 
@@ -331,7 +338,7 @@ def clear_cart():
 @jwt_required()
 def decrement_item_quantity(id):
     current_user_id = get_jwt_identity()
-
+    
     # Obtener el carrito del usuario autenticado
     cart = Cart.query.filter_by(user_id=current_user_id).first()
 
@@ -350,9 +357,14 @@ def decrement_item_quantity(id):
 
     # Decrementar la cantidad del ítem
     cart_item.quantity -= 1
+    
+    cart_items = CartItem.query.filter_by(cart_id=cart.id).all()
+    serialized_items = [item.serialize() for item in cart_items]
     db.session.commit()
+    
+    
 
-    return jsonify(cart_item.serialize()), 200
+    return jsonify({"msg": "Item decremented", "cart": serialized_items}), 200
 
 with app.app_context():
     db.create_all()
