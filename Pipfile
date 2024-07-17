@@ -11,6 +11,7 @@ flask-migrate = "*"
 python-dotenv = "*"
 psycopg2-binary = "*"
 flask-jwt-extended = "*"
+paypalrestsdk = "*"
 
 [dev-packages]
 

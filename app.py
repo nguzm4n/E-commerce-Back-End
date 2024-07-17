@@ -1,13 +1,15 @@
 import os
 import datetime
 from random import randint
-from flask import Flask, jsonify, request, json
+from flask import Flask, jsonify, request, json, redirect, url_for
 from flask_migrate import Migrate
 from flask_cors import CORS
 from dotenv import load_dotenv  # Para leer el archivo .env
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
 from werkzeug.security import generate_password_hash, check_password_hash
-from models import db, User, Product, Cart, CartItem
+import paypalrestsdk
+from models import db, User, Product, Cart, CartItem, Order, OrderItem
+from config import paypalrestsdk
 load_dotenv()
 
 app = Flask(__name__)
@@ -18,6 +20,11 @@ app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
 app.config['SESSION_TYPE'] = 'filesystem' 
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 
+paypalrestsdk.configure({
+    "mode": "sandbox",  # Cambia a "live" para producción
+    "client_id": os.getenv("PAYPAL_CLIENT_ID"),
+    "client_secret": os.getenv("PAYPAL_CLIENT_SECRET")
+})
 
 db.init_app(app)
 jwt = JWTManager(app)
@@ -220,7 +227,7 @@ def add_to_cart(id):
     current_user_id = get_jwt_identity()
     product = Product.query.get(id)
     cart = Cart.query.filter_by(user_id=current_user_id).first()
-    
+
     if not product:
         return jsonify({"msg": "Product not found"}), 404
 
@@ -245,7 +252,7 @@ def add_to_cart(id):
             return jsonify({"msg": "Not enough stock available"}), 400
         cart_item = CartItem(cart_id=cart.id, product_id=product.id, quantity=1)
         db.session.add(cart_item)
-        
+
     cart_items = CartItem.query.filter_by(cart_id=cart.id).all()
     serialized_items = [item.serialize() for item in cart_items]
     db.session.commit()
@@ -298,7 +305,7 @@ def remove_cart_item(id):
     current_user_id = get_jwt_identity()
     product = Product.query.get(id)
     cart = Cart.query.filter_by(user_id=current_user_id).first()
-    
+
     if not product:
         return jsonify({"msg": "Product not found"}), 404
 
@@ -310,11 +317,11 @@ def remove_cart_item(id):
     if not cart_item:
         return jsonify({"msg": "Product not found in cart"}), 404
 
-    
+
 
     db.session.delete(cart_item)
     db.session.commit()
-    
+
     cart_items = CartItem.query.filter_by(cart_id=cart.id).all()
     serialized_items = [item.serialize() for item in cart_items]
     return jsonify({"success": "Product removed from cart successfully", "cart": serialized_items}), 200
@@ -339,8 +346,8 @@ def clear_cart():
 @jwt_required()
 def decrement_item_quantity(id):
     current_user_id = get_jwt_identity()
-    
-    
+
+
     cart = Cart.query.filter_by(user_id=current_user_id).first()
 
     if not cart:
@@ -354,7 +361,7 @@ def decrement_item_quantity(id):
 
     # Verificar que la cantidad actual sea mayor que 1
     if cart_item.quantity <= 1:
-        return jsonify({"msg": "Item quantity cannot be less than 1", "cart": serialized_items }), 400
+        return jsonify({"msg": "Item quantity cannot be less than 1"}), 400
 
     # Decrementar la cantidad del ítem
     cart_item.quantity -= 1
@@ -366,6 +373,69 @@ def decrement_item_quantity(id):
     
 
     return jsonify({"success": "Item decremented", "cart": serialized_items}), 200
+
+
+@app.route('/order', methods=['POST'])
+@jwt_required()
+def create_order():
+    current_user_id = get_jwt_identity()
+    cart = Cart.query.filter_by(user_id=current_user_id).first()
+
+    if not cart:
+        return jsonify({"msg": "Cart is empty"}), 400
+
+    cart_items = CartItem.query.filter_by(cart_id=cart.id).all()
+    if not cart_items:
+        return jsonify({"msg": "No items in cart"}), 400
+
+    total_price = sum(item.product.price * item.quantity for item in cart_items)
+
+    order = Order(
+        user_id=current_user_id,
+        total_price=total_price,
+        status='Pending'
+    )
+    db.session.add(order)
+    db.session.commit()
+
+    for item in cart_items:
+        order_item = OrderItem(
+            order_id=order.id,
+            product_id=item.product_id,
+            quantity=item.quantity
+        )
+        db.session.add(order_item)
+
+        # Actualizar el stock del producto
+        product = Product.query.get(item.product_id)
+        product.stock_quantity -= item.quantity
+
+    db.session.commit()
+
+    # Limpiar el carrito después de crear la orden
+    CartItem.query.filter_by(cart_id=cart.id).delete()
+    db.session.commit()
+
+    return jsonify({"success": "Order created successfully", "order": order.serialize()}), 201
+
+
+@app.route('/order/<int:order_id>', methods=['GET'])
+@jwt_required()
+def get_order(order_id):
+    current_user_id = get_jwt_identity()
+    order = Order.query.filter_by(id=order_id, user_id=current_user_id).first()
+
+    if not order:
+        return jsonify({"msg": "Order not found"}), 404
+
+    return jsonify({"order": order.serialize()}), 200
+
+
+
+
+
+
+
 
 with app.app_context():
     db.create_all()
