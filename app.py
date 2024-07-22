@@ -21,7 +21,7 @@ app.config['SESSION_TYPE'] = 'filesystem'
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 
 paypalrestsdk.configure({
-    "mode": "sandbox",  # Cambia a "live" para producción
+    "mode": "sandbox",  
     "client_id": os.getenv("PAYPAL_CLIENT_ID"),
     "client_secret": os.getenv("PAYPAL_CLIENT_SECRET")
 })
@@ -96,6 +96,11 @@ def sign_up():
         return jsonify({"msg": "name is required"}), 400
     elif name == "":
         return jsonify({"msg": "name is required"}), 400
+    elif not address:
+        return jsonify({"msg": "address is required"}), 400
+    elif address == "":
+        return jsonify({"msg": "address is required"}), 400
+    
 
     user_found = User.query.filter_by(email=email).first()
     if user_found:
@@ -226,7 +231,6 @@ def get_all_guitars():
 def add_to_cart(id):
     current_user_id = get_jwt_identity()
     product = Product.query.get(id)
-    cart = Cart.query.filter_by(user_id=current_user_id).first()
 
     if not product:
         return jsonify({"msg": "Product not found"}), 404
@@ -267,7 +271,10 @@ def view_cart():
     cart = Cart.query.filter_by(user_id=current_user_id).first()
 
     if not cart:
-        return jsonify({"msg": "Cart is empty"}), 200
+        cart = Cart(user_id=current_user_id)
+        db.session.add(cart)
+        db.session.commit()
+        return jsonify({"msg": "Cart created, and is empty"}), 201
 
     cart_items = CartItem.query.filter_by(cart_id=cart.id).all()
     serialized_items = [item.serialize() for item in cart_items]
