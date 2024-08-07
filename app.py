@@ -437,7 +437,12 @@ def get_order(order_id):
 
     return jsonify({"order": order.serialize()}), 200
 
+@app.route('/search', methods=['POST'])
+def search_item():
+    guitar = Product.query.filter_by()
 
+    return jsonify({"success": guitar}), 200
+    
 
 
 
