@@ -439,11 +439,23 @@ def get_order(order_id):
 
 @app.route('/search', methods=['POST'])
 def search_item():
-    guitar = Product.query.filter_by()
+    search_term = request.json.get('search_term')
 
-    return jsonify({"success": guitar}), 200
+    if not search_term:
+        return jsonify({"msg": "Search term is required"}), 400
     
+    # Hacer una búsqueda en los campos que quieras, por ejemplo, nombre y descripción del producto
+    search_results = Product.query.filter(
+        (Product.name.ilike(f"%{search_term}%")) | 
+        (Product.description.ilike(f"%{search_term}%"))
+    ).all()
 
+    if not search_results:
+        return jsonify({"msg": "No items found"}), 404
+    
+    serialized_results = [product.serialize() for product in search_results]
+
+    return jsonify({"success": "Items found", "results": serialized_results}), 200
 
 
 
