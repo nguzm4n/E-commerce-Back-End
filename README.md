@@ -21,7 +21,7 @@ SECRET_KEY=your_secret_key
 Database Migration:
 Run the following commands to set up the database:
 
-bash
+
 
 flask db init
 flask db migrate
@@ -30,6 +30,5 @@ flask db upgrade
 Run the Application:
 Start the Flask application with:
 
-bash
 
 python your_script_name.py
