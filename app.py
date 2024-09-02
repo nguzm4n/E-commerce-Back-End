@@ -189,26 +189,26 @@ def add_item():
     return jsonify({"success": "Item added successfully", "datos": datos}), 201
 
 
-@app.route('/getprs', methods=['GET'])
+@app.route('/getstrat', methods=['GET'])
 def get_prs():
-    prs_guitars = Product.query.filter_by(brand='prs').all()
-    serialized_guitars = [guitar.serialize() for guitar in prs_guitars]
+    stratocaster_guitars = Product.query.filter_by(brand='stratocaster').all()
+    serialized_guitars = [guitar.serialize() for guitar in stratocaster_guitars]
 
     return jsonify({"success": "PRS guitars gathered successfully", "guitars": serialized_guitars}), 200
 
 
-@app.route('/getchapman', methods=['GET'])
+@app.route('/gettelecaster', methods=['GET'])
 def get_chapman():
-    chapman_guitars = Product.query.filter_by(brand='chapman').all()
-    serialized_guitars = [guitar.serialize() for guitar in chapman_guitars]
+    telecaster_guitars = Product.query.filter_by(brand='telecaster').all()
+    serialized_guitars = [guitar.serialize() for guitar in telecaster_guitars]
 
     return jsonify({"success": "Chapman guitars gathered successfully", "guitars": serialized_guitars}), 200
 
 
-@app.route('/getsolar', methods=['GET'])
+@app.route('/getsg', methods=['GET'])
 def get_solar():
-    solar_guitars = Product.query.filter_by(brand='solar').all()
-    serialized_guitars = [guitar.serialize() for guitar in solar_guitars]
+    sg_guitars = Product.query.filter_by(brand='sg').all()
+    serialized_guitars = [guitar.serialize() for guitar in sg_guitars]
 
     return jsonify({"success": "Solar guitars gathered successfully", "guitars": serialized_guitars}), 200
 
@@ -386,6 +386,12 @@ def decrement_item_quantity(id):
 @jwt_required()
 def create_order():
     current_user_id = get_jwt_identity()
+    
+        # Verificar si el usuario ya tiene una orden pendiente
+    existing_order = Order.query.filter_by(user_id=current_user_id, status='Pending').first()
+    if existing_order:
+        return jsonify({"msg": "You already have a pending order"}), 400
+    #Obtener carrito del usuario
     cart = Cart.query.filter_by(user_id=current_user_id).first()
 
     if not cart:
@@ -437,6 +443,20 @@ def get_order(order_id):
 
     return jsonify({"order": order.serialize()}), 200
 
+
+
+@app.route('/userorder', methods=['GET'])
+@jwt_required()
+def get_all_orders():
+    current_user_id = get_jwt_identity()
+    order = Order.query.filter_by(user_id=current_user_id).first()
+
+    if not order:
+        return jsonify({"msg": "User has no orders"}), 404
+
+    return jsonify({"order": order.serialize()}), 200
+
+
 @app.route('/search', methods=['POST'])
 def search_item():
     search_term = request.json.get('search_term')
@@ -446,7 +466,7 @@ def search_item():
     
     # Hacer una búsqueda en los campos que quieras, por ejemplo, nombre y descripción del producto
     search_results = Product.query.filter(
-        (Product.name.ilike(f"%{search_term}%")) | 
+        (Product.brand.ilike(f"%{search_term}%")) | 
         (Product.description.ilike(f"%{search_term}%"))
     ).all()
 
