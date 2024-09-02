@@ -2,10 +2,9 @@ This API provides a complete backend for an eCommerce application, including use
 
 Setup
 
-    Install Dependencies:
-    Ensure you have the necessary Python packages installed:
+Install Dependencies:
+Ensure you have the necessary Python packages installed:
 
-    bash
 
 pip install flask flask_sqlalchemy flask_migrate flask_jwt_extended flask_cors python-dotenv werkzeug paypalrestsdk
 
@@ -22,7 +21,7 @@ SECRET_KEY=your_secret_key
 Database Migration:
 Run the following commands to set up the database:
 
-bash
+
 
 flask db init
 flask db migrate
@@ -31,6 +30,5 @@ flask db upgrade
 Run the Application:
 Start the Flask application with:
 
-bash
 
 python your_script_name.py
