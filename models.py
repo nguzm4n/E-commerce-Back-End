@@ -113,7 +113,6 @@ class Order(db.Model):
     status = db.Column(db.String(50), nullable=False, default='Pending')
     created_at = db.Column(db.DateTime(), default=db.func.current_timestamp())
     updated_at = db.Column(db.DateTime(), default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
-    
     user = db.relationship('User', backref='orders')
     items = db.relationship('OrderItem', backref='order', lazy=True)
 
@@ -152,6 +151,35 @@ class OrderItem(db.Model):
             "product_name": self.product.name,
             "product_avatar": self.product.avatar,
             "price": self.product.price
+        }
+
+    def save(self):
+        db.session.add(self)
+        db.session.commit()
+
+class PaymentDetails(db.Model):
+    __tablename__ = 'payment_details'
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False)
+    paypal_transaction_id = db.Column(db.String(255), nullable=False, unique=True)
+    payer_name = db.Column(db.String(255), nullable=False)
+    payment_time = db.Column(db.DateTime(), nullable=False)
+    amount = db.Column(db.Float, nullable=False)
+    currency = db.Column(db.String(10), nullable=False)  # USD, EUR, etc.
+    created_at = db.Column(db.DateTime(), default=db.func.current_timestamp())
+
+    order = db.relationship('Order', backref='payment_details')
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "order_id": self.order_id,
+            "paypal_transaction_id": self.paypal_transaction_id,
+            "payer_name": self.payer_name,
+            "payment_time": self.payment_time,
+            "amount": self.amount,
+            "currency": self.currency,
+            "created_at": self.created_at
         }
 
     def save(self):

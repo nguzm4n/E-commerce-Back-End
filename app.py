@@ -8,7 +8,7 @@ from dotenv import load_dotenv  # Para leer el archivo .env
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
 from werkzeug.security import generate_password_hash, check_password_hash
 import paypalrestsdk
-from models import db, User, Product, Cart, CartItem, Order, OrderItem
+from models import db, User, Product, Cart, CartItem, Order, OrderItem, PaymentDetails
 from config import paypalrestsdk
 load_dotenv()
 
@@ -394,6 +394,12 @@ def create_order():
     #Obtener carrito del usuario
     cart = Cart.query.filter_by(user_id=current_user_id).first()
 
+    frozen_order = Order.query.filter_by(user_id=current_user_id, status='Frozen').first()
+    
+    if frozen_order:
+        return jsonify({"msg": "You have an incomplete order, please contact support to fix this situation"})
+    
+    
     if not cart:
         return jsonify({"msg": "Cart is empty"}), 400
 
@@ -477,7 +483,66 @@ def search_item():
 
     return jsonify({"success": "Items found", "results": serialized_results}), 200
 
+@app.route('/payment', methods=['POST'])
+@jwt_required()
+def save_payment_details():
+    data = request.get_json()
 
+    # Extraer los datos necesarios de la solicitud
+    order_id = data.get('order_id')
+    paypal_transaction_id = data.get('paypal_transaction_id')
+    payer_name = data.get('payer_name')
+    payment_time = data.get('payment_time')
+    amount = data.get('amount')
+    currency = data.get('currency')
+
+    # Verificar si la orden existe
+    order = Order.query.filter_by(id=order_id).first()
+    if not order:
+        return jsonify({"msg": "Order not found"}), 404
+
+    # Crear una nueva instancia de PaymentDetails
+    payment_details = PaymentDetails(
+        order_id=order_id,
+        paypal_transaction_id=paypal_transaction_id,
+        payer_name=payer_name,
+        payment_time=payment_time,
+        amount=amount,
+        currency=currency
+    )
+
+    try:
+        # Guardar la información del pago en la base de datos
+        payment_details.save()
+        return jsonify({"msg": "Payment details saved successfully", "payment": payment_details.serialize()}), 201
+    except Exception as e:
+        # Manejar errores como la violación de la unicidad de paypal_transaction_id
+        return jsonify({"msg": f"Error saving payment details: {str(e)}"}), 400
+
+
+
+@app.route('/order/<int:order_id>/status', methods=['PATCH'])
+@jwt_required()
+def update_order_status(order_id):
+    current_user_id = get_jwt_identity()
+    order = Order.query.filter_by(id=order_id, user_id=current_user_id).first()
+
+    if not order:
+        return jsonify({"msg": "Order not found"}), 404
+
+    data = request.get_json()
+    new_status = data.get('status')
+
+    if new_status not in ["Paid", "Frozen"]:
+        return jsonify({"msg": "Invalid status"}), 400
+
+    order.status = new_status
+
+    try:
+        db.session.commit()
+        return jsonify({"msg": f"Order status updated to {new_status}"}), 200
+    except Exception as e:
+        return jsonify({"msg": f"Error updating order status: {str(e)}"}), 400
 
 
 
