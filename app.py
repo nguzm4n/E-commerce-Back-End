@@ -583,8 +583,11 @@ def delete_order(order_id):
         # Eliminar la orden
         db.session.delete(order)
         db.session.commit()
-
-        return jsonify({"success": "Order deleted successfully"}), 200
+        
+        orders = Order.query.filter_by(user_id=current_user_id).all()
+        serialized_orders = [order.serialize() for order in orders]
+   
+        return jsonify({"success": "Order deleted successfully", "orders": serialized_orders }), 200
 
     except Exception as e:
         db.session.rollback()
