@@ -451,16 +451,20 @@ def get_order(order_id):
 
 
 
-@app.route('/userorder', methods=['GET'])
+@app.route('/userorders', methods=['GET'])
 @jwt_required()
 def get_all_orders():
     current_user_id = get_jwt_identity()
-    order = Order.query.filter_by(user_id=current_user_id).first()
+    orders = Order.query.filter_by(user_id=current_user_id).all()
 
-    if not order:
+    if not orders:
         return jsonify({"msg": "User has no orders"}), 404
 
-    return jsonify({"order": order.serialize()}), 200
+    # Serializar cada orden en la lista de órdenes
+    serialized_orders = [order.serialize() for order in orders]
+
+    return jsonify({"orders": serialized_orders}), 200
+
 
 
 @app.route('/search', methods=['POST'])
@@ -481,7 +485,7 @@ def search_item():
     
     serialized_results = [product.serialize() for product in search_results]
 
-    return jsonify({"success": "Items found", "results": serialized_results}), 200
+    return jsonify({"success": "Items found", "guitars": serialized_results}), 200
 
 @app.route('/payment', methods=['POST'])
 @jwt_required()
@@ -543,6 +547,51 @@ def update_order_status(order_id):
         return jsonify({"msg": f"Order status updated to {new_status}"}), 200
     except Exception as e:
         return jsonify({"msg": f"Error updating order status: {str(e)}"}), 400
+
+
+@app.route('/delete/order/<int:order_id>', methods=['DELETE'])
+@jwt_required()
+def delete_order(order_id):
+    current_user_id = get_jwt_identity()
+
+    try:
+        # Obtener la orden a eliminar
+        order = Order.query.filter_by(user_id=current_user_id, id=order_id).first()
+        
+        # Verificar el estado de la orden
+        if order.status == "Paid":
+            return jsonify({"msg": "You cannot delete a Paid order"}), 403
+        
+        if not order:
+            return jsonify({"msg": "Order not found"}), 404
+
+        # Eliminar los detalles de pago asociados
+        payment_details = PaymentDetails.query.filter_by(order_id=order_id).first()
+        if payment_details:
+            db.session.delete(payment_details)
+
+        # Eliminar los items asociados
+        for item in order.items:
+            # Actualizar el stock de productos
+            product = Product.query.get(item.product_id)
+            if product:
+                product.stock_quantity += item.quantity
+                db.session.commit()
+
+            # Eliminar el item del carrito
+            db.session.delete(item)
+        # Eliminar la orden
+        db.session.delete(order)
+        db.session.commit()
+
+        return jsonify({"success": "Order deleted successfully"}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"msg": str(e)}), 500
+
+
+
 
 
 

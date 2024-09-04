@@ -13,6 +13,8 @@ class User(db.Model):
     name = db.Column(db.String(120), nullable=False)
     address = db.Column(db.String(255), nullable=False)
     phone_number = db.Column(db.String(20))
+    admin = db.Column(db.Boolean, default=False)
+    active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime(), default=db.func.current_timestamp())
     updated_at = db.Column(db.DateTime(), default=db.func.current_timestamp(
     ), onupdate=db.func.current_timestamp())
