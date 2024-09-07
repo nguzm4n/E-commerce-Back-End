@@ -24,7 +24,9 @@ class User(db.Model):
         return {
             "id": self.id,
             "username": self.username,
-            "email": self.email
+            "email": self.email,
+            "admin":self.admin,
+            "name": self.name
         }
 
     def save(self):

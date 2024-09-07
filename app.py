@@ -391,6 +391,10 @@ def create_order():
     existing_order = Order.query.filter_by(user_id=current_user_id, status='Pending').first()
     if existing_order:
         return jsonify({"msg": "You already have a pending order"}), 400
+    # Verificar orden Frozen
+    Frozen_order = Order.query.filter_by(user_id=current_user_id, status='Frozen').first()
+    if Frozen_order:
+        return jsonify({"msg": "You haven a Frozen Order, Please Contact Support"}), 400
     #Obtener carrito del usuario
     cart = Cart.query.filter_by(user_id=current_user_id).first()
 
@@ -549,6 +553,32 @@ def update_order_status(order_id):
         return jsonify({"msg": f"Error updating order status: {str(e)}"}), 400
 
 
+@app.route('/admin/user_orders/<int:user_id>', methods=['GET'])
+@jwt_required()
+def get_user_orders(user_id):
+    # Verificar si el usuario actual es administrador
+    current_user_id = get_jwt_identity()
+    current_user = User.query.get(current_user_id)
+    
+    if not current_user or not current_user.admin:
+        return jsonify({"msg": "Admin privileges required"}), 403
+
+    
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"msg": "User not found"}), 404
+
+    
+    orders = Order.query.filter_by(user_id=user.id).all()
+
+    if not orders:
+        return jsonify({"msg": "No orders found for this user"}), 404
+
+    
+    serialized_orders = [order.serialize() for order in orders]
+    return jsonify({"orders": serialized_orders}), 200
+
+
 @app.route('/delete/order/<int:order_id>', methods=['DELETE'])
 @jwt_required()
 def delete_order(order_id):
@@ -561,6 +591,8 @@ def delete_order(order_id):
         # Verificar el estado de la orden
         if order.status == "Paid":
             return jsonify({"msg": "You cannot delete a Paid order"}), 403
+        if order.status == "Frozen":
+            return jsonify({"msg": "You cannot delete a Frozen order"}), 403
         
         if not order:
             return jsonify({"msg": "Order not found"}), 404
@@ -594,6 +626,73 @@ def delete_order(order_id):
         return jsonify({"msg": str(e)}), 500
 
 
+## Admin Actions
+@app.route('/admin/users', methods=['GET'])
+@jwt_required()
+def get_all_users():
+    current_user_id = get_jwt_identity()
+    current_user = User.query.get(current_user_id)
+    
+    if not current_user or not current_user.admin:
+        return jsonify({"msg": "Admin privileges required"}), 403
+
+    users = User.query.all()
+    if not users:
+        return jsonify({"msg": "No users found"}), 404
+
+    serialized_users = [user.serialize() for user in users]
+    return jsonify({"users": serialized_users}), 200
+
+@app.route('/admin/search_user', methods=['POST'])
+@jwt_required()
+def search_user():
+    # Verificar si el usuario actual es administrador
+    current_user_id = get_jwt_identity()
+    current_user = User.query.get(current_user_id)
+    
+    if not current_user or not current_user.admin:
+        return jsonify({"msg": "Admin privileges required"}), 403
+    
+    search_term = request.json.get('search_term', '')
+
+    if not search_term:
+        return jsonify({"msg": "Search term is required"}), 400
+
+    # Buscar usuarios por nombre o email
+    users = User.query.filter(
+        (User.name.ilike(f"%{search_term}%")) | 
+        (User.email.ilike(f"%{search_term}%"))
+    ).all()
+
+    if not users:
+        return jsonify({"msg": "No users found"}), 404
+    
+    serialized_users = [user.serialize() for user in users]
+    return jsonify({"users": serialized_users}), 200
+
+
+@app.route('/admin/order/<int:order_id>', methods=['DELETE'])
+@jwt_required()
+def delete_order_by_status(order_id):
+    current_user_id = get_jwt_identity()
+    current_user = User.query.get(current_user_id)
+    
+    if not current_user or not current_user.admin:
+        return jsonify({"msg": "Admin privileges required"}), 403
+    
+    order = Order.query.get(order_id)
+    if not order:
+        return jsonify({"msg": "Order not found"}), 404
+    
+    if order.status not in ['Pending', 'Frozen']:
+        return jsonify({"msg": "Only orders with 'Pending' or 'Frozen' status can be deleted"}), 400
+    
+   
+    OrderItem.query.filter_by(order_id=order.id).delete()
+    db.session.delete(order)
+    db.session.commit()
+
+    return jsonify({"msg": "Order deleted successfully"}), 200
 
 
 
