@@ -169,7 +169,7 @@ class PaymentDetails(db.Model):
     payer_name = db.Column(db.String(255), nullable=False)
     payment_time = db.Column(db.DateTime(), nullable=False)
     amount = db.Column(db.Float, nullable=False)
-    currency = db.Column(db.String(10), nullable=False)  # USD, EUR, etc.
+    currency = db.Column(db.String(10), nullable=False) 
     created_at = db.Column(db.DateTime(), default=db.func.current_timestamp())
 
     order = db.relationship('Order', backref='payment_details')
@@ -184,6 +184,56 @@ class PaymentDetails(db.Model):
             "amount": self.amount,
             "currency": self.currency,
             "created_at": self.created_at
+        }
+
+    def save(self):
+        db.session.add(self)
+        db.session.commit()
+        
+        
+class Rating(db.Model):
+    __tablename__ = 'ratings'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
+    rating = db.Column(db.Integer, nullable=False)  
+    created_at = db.Column(db.DateTime(), default=db.func.current_timestamp())
+
+    user = db.relationship('User', backref='ratings')
+    product = db.relationship('Product', backref='ratings')
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "product_id": self.product_id,
+            "rating": self.rating,
+            "created_at": self.created_at,
+            
+        }
+
+    def save(self):
+        db.session.add(self)
+        db.session.commit()
+
+class Review(db.Model):
+    __tablename__ = 'reviews'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
+    comment = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime(), default=db.func.current_timestamp())
+
+    user = db.relationship('User', backref='reviews')
+    product = db.relationship('Product', backref='reviews')
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "product_id": self.product_id,
+            "comment": self.comment,
+            "created_at": self.created_at,
+            "user_name": self.user.name  # Incluye información del usuario si es útil
         }
 
     def save(self):
