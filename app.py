@@ -64,7 +64,7 @@ def login():
         "access_token": access_token,
         "user": user_found.serialize()
     }
-    return jsonify(datos), 201
+    return jsonify({"success": "Log In Successfully", "datos": datos}), 201
 
 
 @app.route('/signup', methods=['POST'])
@@ -80,26 +80,26 @@ def sign_up():
     name = user_data.get('name')
     address = user_data.get('address')
 
-    if not username:
-        return jsonify({"msg": "username is required"}), 400
-    elif username == "":
-        return jsonify({"msg": "username is required"}), 400
-    elif not password:
-        return jsonify({"msg": "password is required"}), 400
-    elif password == "":
-        return jsonify({"msg": "password is required"}), 400
-    elif not email:
-        return jsonify({"msg": "email is required"}), 400
+    if not email:
+        return jsonify({"msg": "Email is required"}), 400
     elif email == "":
-        return jsonify({"msg": "email is required"}), 400
+        return jsonify({"msg": "Email is required"}), 400
+    elif not password:
+        return jsonify({"msg": "Password is required"}), 400
+    elif password == "":
+        return jsonify({"msg": "Password is required"}), 400
+    elif not username:
+        return jsonify({"msg": "Username is required"}), 400
+    elif username == "":
+        return jsonify({"msg": "Username is required"}), 400
     elif not name:
-        return jsonify({"msg": "name is required"}), 400
+        return jsonify({"msg": "Name is required"}), 400
     elif name == "":
-        return jsonify({"msg": "name is required"}), 400
+        return jsonify({"msg": "Name is required"}), 400
     elif not address:
-        return jsonify({"msg": "address is required"}), 400
+        return jsonify({"msg": "Address is required"}), 400
     elif address == "":
-        return jsonify({"msg": "address is required"}), 400
+        return jsonify({"msg": "Address is required"}), 400
     
 
     user_found = User.query.filter_by(email=email).first()
@@ -218,7 +218,7 @@ def get_guitar_id(id):
     guitar_id = Product.query.get(id)
     if not guitar_id:
         return jsonify({"msg": "Guitar Not Found"}), 404
-    return jsonify(guitar_id.serialize()), 200
+    return jsonify({"succes": "Guitar Found", "guitar":guitar_id.serialize()}), 200
 
 @app.route('/getallguitars', methods=['GET'])
 def get_all_guitars():
@@ -232,6 +232,9 @@ def add_to_cart(id):
     current_user_id = get_jwt_identity()
     product = Product.query.get(id)
 
+    if current_user_id is None:
+        return jsonify({"msg": "User must be logged in to add items to the cart"}), 401
+    
     if not product:
         return jsonify({"msg": "Product not found"}), 404
 
