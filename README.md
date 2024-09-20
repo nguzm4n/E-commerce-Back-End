@@ -1,7 +1,7 @@
-E-commerce Backend Documentation
-Overview
+# E-commerce Backend Documentation
+# Overview
 
-This project is a Flask-based backend for an e-commerce platform. It supports user authentication, product management, shopping cart, orders, and payments. The backend is built with Flask, uses SQLAlchemy for database interactions, and integrates with PayPal for payment processing.
+### This project is a Flask-based backend for an e-commerce platform. It supports user authentication, product management, shopping cart, orders, and payments. The backend is built with Flask, uses SQLAlchemy for database interactions, and integrates with PayPal for payment processing.
 Installation
 Prerequisites
 
@@ -10,7 +10,7 @@ Prerequisites
     Flask
     PayPal SDK
 
-Setup
+### Setup
 
     Clone the repository.
 
@@ -43,8 +43,8 @@ bash
 
     flask run
 
-Endpoints
-Authentication
+### Endpoints
+### Authentication
 
     POST /login
     Logs in the user, returning a JWT token.
@@ -56,7 +56,7 @@ Authentication
         Request body: { username, email, password, name, address }
         Response: JWT token and user details.
 
-Products
+### Products
 
     POST /additem
     Adds a new product.
@@ -71,7 +71,7 @@ Products
     Retrieves a specific guitar by ID.
         Response: Guitar details.
 
-Shopping Cart
+### Shopping Cart
 
     POST /cart/add/{id}
     Adds a product to the user's cart.
@@ -94,7 +94,7 @@ Shopping Cart
         Request body: { product_id, quantity }
         Response: Success message.
 
-Orders
+### Orders
 
     POST /order
     Creates a new order from the user's cart.
@@ -111,7 +111,7 @@ Orders
         JWT required.
         Response: List of orders.
 
-Payment
+### Payment
 
     POST /payment
     Saves payment details for an order.
@@ -119,7 +119,7 @@ Payment
         Request body: { order_id, paypal_transaction_id, payer_name, payment_time, amount, currency }
         Response: Payment details.
 
-Admin
+### Admin
 
     GET /admin/users
     Retrieves a list of all users. Requires admin privileges.
@@ -131,35 +131,35 @@ Admin
         JWT required.
         Response: Updated list of user orders.
 
-Models
-User
+### Models
+### User
 
     id, username, email, password, name, address, phone_number, admin, active, created_at, updated_at
 
-Product
+### Product
 
     id, name, description, price, avatar, stock_quantity, brand, created_at, updated_at
 
-Cart
+### Cart
 
     id, cart_id, user_id, created_at, updated_at
 
-CartItem
+### CartItem
 
     id, cart_id, product_id, quantity
 
-Order
+### Order
 
     id, order_id, user_id, total_price, status, created_at, updated_at
 
-OrderItem
+### OrderItem
 
     id, order_id, product_id, quantity
 
-PaymentDetails
+### PaymentDetails
 
     id, order_id, paypal_transaction_id, payer_name, payment_time, amount, currency, created_at
 
-Payment Integration
+### Payment Integration
 
 The backend integrates with PayPal to process payments. Use the sandbox mode for development.
